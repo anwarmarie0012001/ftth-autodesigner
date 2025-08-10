@@ -1,21 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from .routers import design  # import router FTTH
 
-app = FastAPI()
+# Buat instance FastAPI
+app = FastAPI(title="FTTH AutoDesigner Backend")
 
-# Ganti sesuai domain frontend kamu di Codespaces
-origins = [
-    "https://special-couscous-5jj4wwrvg4j24q7r-5173.app.github.dev",
-]
-
+# Middleware CORS untuk mengizinkan akses dari frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,        # Bisa juga ["*"] untuk semua origin
-    allow_credentials=True,
+    allow_origins=["*"],  # sementara semua origin boleh, nanti bisa dibatasi
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
+# Endpoint root untuk test koneksi
 @app.get("/")
-def read_root():
+def root():
     return {"message": "Hello from Backend"}
+
+# Registrasi router design
+app.include_router(design.router)
