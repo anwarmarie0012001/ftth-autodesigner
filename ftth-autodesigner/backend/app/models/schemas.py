@@ -1,50 +1,39 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 
-# -----------------------------------
-# Model dasar koordinat
-# -----------------------------------
+# ---- primitive ----
 class LatLng(BaseModel):
     lat: float
     lng: float
 
+class LineString(BaseModel):
+    points: List[LatLng] = Field(default_factory=list)
 
-# -----------------------------------
-# Schema untuk ODC
-# -----------------------------------
+# ---- ODC ----
 class ODCBoundary(BaseModel):
-    points: List[LatLng]
+    points: List[LatLng] = Field(default_factory=list)
 
 class ODCMarker(BaseModel):
-    lat: float
-    lng: float
+    position: LatLng
 
-class ODCData(BaseModel):
-    boundary: Optional[List[LatLng]] = None
+class ODCState(BaseModel):
+    boundary: Optional[ODCBoundary] = None
     marker: Optional[ODCMarker] = None
 
-
-# -----------------------------------
-# Schema untuk ODP
-# -----------------------------------
+# ---- ODP ----
 class GenerateODPRequest(BaseModel):
-    boundary: List[LatLng]   # polygon ODC
-    grid_size: int = 60      # default grid size
-    snap_th: int = 8         # default snap threshold
+    odc_boundary: ODCBoundary
+    roads: Optional[List[LineString]] = None
+    target_count: Optional[int] = Field(default=None, description="Jumlah ODP yang diinginkan; None = auto")
 
-class ODPBoundary(BaseModel):
-    points: List[LatLng]
+class ODPPolygon(BaseModel):
+    id: int
+    points: List[LatLng]  # polygon (tertutup)
 
-class ODPPoint(BaseModel):
-    lat: float
-    lng: float
+class ODPMarker(BaseModel):
+    id: int
+    position: LatLng
 
-class ODPResult(BaseModel):
-    odp_boundaries: List[ODPBoundary]
-    odp_points: List[ODPPoint]
-
-
-# -----------------------------------
-# Alias agar kompatibel dengan kode lama
-# -----------------------------------
-ODPResponse = ODPResult
+class ODPResponse(BaseModel):
+    polygons: List[ODPPolygon]
+    markers: List[ODPMarker]

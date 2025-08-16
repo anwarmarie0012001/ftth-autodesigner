@@ -1,57 +1,31 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Tuple
 
-router = APIRouter(prefix="/odc", tags=["ODC"])
+router = APIRouter(
+    prefix="/odc",
+    tags=["ODC"]
+)
 
-# -----------------------------
-# Model data
-# -----------------------------
-class LatLng(BaseModel):
+class BoundaryRequest(BaseModel):
+    boundary: List[Tuple[float, float]]
+
+class MarkerRequest(BaseModel):
     lat: float
     lng: float
 
-class ODCBoundary(BaseModel):
-    points: List[LatLng]
+# Simpan sementara di memory (nanti bisa DB)
+odc_boundary = None
+odc_marker = None
 
-class ODCMarker(BaseModel):
-    lat: float
-    lng: float
+@router.post("/boundary")
+async def set_boundary(req: BoundaryRequest):
+    global odc_boundary
+    odc_boundary = req.boundary
+    return {"message": "Boundary ODC saved", "boundary": odc_boundary}
 
-class ODCData(BaseModel):
-    boundary: Optional[List[LatLng]] = None
-    marker: Optional[ODCMarker] = None
-
-
-# -----------------------------
-# Penyimpanan sementara (in-memory)
-# -----------------------------
-odc_state: ODCData = ODCData()
-
-
-# -----------------------------
-# Endpoint
-# -----------------------------
-@router.post("/set-boundary")
-def set_boundary(boundary: ODCBoundary):
-    """Simpan boundary ODC (list titik polygon)."""
-    global odc_state
-    odc_state.boundary = boundary.points
-    return {"status": "ok", "boundary_points": boundary.points}
-
-
-@router.post("/set-marker")
-def set_marker(marker: ODCMarker):
-    """Simpan marker ODC (titik koordinat)."""
-    global odc_state
-    odc_state.marker = marker
-    return {"status": "ok", "marker": marker}
-
-
-@router.get("/get")
-def get_odc():
-    """Ambil data ODC (boundary + marker)."""
-    return {
-        "boundary": odc_state.boundary,
-        "marker": odc_state.marker,
-    }
+@router.post("/marker")
+async def set_marker(req: MarkerRequest):
+    global odc_marker
+    odc_marker = (req.lat, req.lng)
+    return {"message": "ODC Marker saved", "marker": odc_marker}
