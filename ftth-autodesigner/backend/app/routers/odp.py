@@ -1,36 +1,45 @@
-from fastapi import APIRouter, HTTPException
-from shapely.geometry import shape, LineString
-from app.models.schemas import (
-    GenerateODPRequest,
-    ODPResponse,
-)
-from app.services.odp_generator import generate_odp_boundaries
-from app.services.geo_utils import ensure_polygon
-from app.services.road_utils import parse_roads_from_geojson
+from fastapi import APIRouter
+from pydantic import BaseModel
+from shapely.geometry import Polygon
 
-router = APIRouter(prefix="/odp")
+router = APIRouter()
 
-@router.post("/generate", response_model=ODPResponse)
-def generate_odp(req: GenerateODPRequest):
-    if not req.odc_feature or not req.odc_feature.geometry:
-        raise HTTPException(status_code=400, detail="Missing ODC GeoJSON feature.")
+class BoundaryRequest(BaseModel):
+    boundary: list
 
-    odc_geom = ensure_polygon(shape(req.odc_feature.geometry))
-    roads: list[LineString] = parse_roads_from_geojson(req.roads_geojson) if req.roads_geojson else []
+@router.post("/odc/set")
+async def set_odc_boundary(req: BoundaryRequest):
+    boundary_coords = req.boundary
+    boundary = Polygon(boundary_coords)
 
-    odp_polys, odp_points = generate_odp_boundaries(
-        odc_polygon=odc_geom,
-        roads=roads,
-        grid_size_m=req.grid_size_m or 60.0,
-        snap_threshold_m=req.snap_threshold_m or 8.0,
-    )
+    # hitung centroid untuk ODC marker
+    odc_marker = [boundary.centroid.y, boundary.centroid.x]
 
-    return ODPResponse(
-        odp_boundaries=[p.__geo_interface__ for p in odp_polys],
-        odp_points=[pt.__geo_interface__ for pt in odp_points],
-        meta={
-            "grid_size_m": req.grid_size_m or 60.0,
-            "snap_threshold_m": req.snap_threshold_m or 8.0,
-            "roads_used": len(roads),
-        },
-    )
+    # pecah boundary jadi 4 sub-grid (contoh sederhana)
+    minx, miny, maxx, maxy = boundary.bounds
+    dx = (maxx - minx) / 2
+    dy = (maxy - miny) / 2
+
+    odp_boundaries = []
+    odp_markers = []
+
+    for i in range(2):
+        for j in range(2):
+            sub_poly = Polygon([
+                (minx + i*dx, miny + j*dy),
+                (minx + (i+1)*dx, miny + j*dy),
+                (minx + (i+1)*dx, miny + (j+1)*dy),
+                (minx + i*dx, miny + (j+1)*dy)
+            ])
+
+            # hanya simpan sub boundary yang masih di dalam ODC
+            if boundary.contains(sub_poly.centroid):
+                coords = [(y, x) for x, y in sub_poly.exterior.coords]  # balik format [lat, lng]
+                odp_boundaries.append(coords)
+                odp_markers.append([sub_poly.centroid.y, sub_poly.centroid.x])
+
+    return {
+        "odc_marker": odc_marker,
+        "odp_boundaries": odp_boundaries,
+        "odp_markers": odp_markers
+    }

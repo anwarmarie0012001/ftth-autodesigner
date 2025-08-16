@@ -1,21 +1,57 @@
-from fastapi import APIRouter, HTTPException
-from typing import List
-from app.models.schemas import ODC, ODCBase
+from fastapi import APIRouter
+from pydantic import BaseModel
+from typing import List, Optional
 
 router = APIRouter(prefix="/odc", tags=["ODC"])
 
-# Simpan data sementara di memory (kalau belum pakai DB)
-odc_list = []
-counter = 1
+# -----------------------------
+# Model data
+# -----------------------------
+class LatLng(BaseModel):
+    lat: float
+    lng: float
 
-@router.post("/", response_model=ODC)
-def create_odc(odc: ODCBase):
-    global counter
-    new_odc = ODC(id=counter, **odc.dict())
-    odc_list.append(new_odc)
-    counter += 1
-    return new_odc
+class ODCBoundary(BaseModel):
+    points: List[LatLng]
 
-@router.get("/", response_model=List[ODC])
-def get_all_odc():
-    return odc_list
+class ODCMarker(BaseModel):
+    lat: float
+    lng: float
+
+class ODCData(BaseModel):
+    boundary: Optional[List[LatLng]] = None
+    marker: Optional[ODCMarker] = None
+
+
+# -----------------------------
+# Penyimpanan sementara (in-memory)
+# -----------------------------
+odc_state: ODCData = ODCData()
+
+
+# -----------------------------
+# Endpoint
+# -----------------------------
+@router.post("/set-boundary")
+def set_boundary(boundary: ODCBoundary):
+    """Simpan boundary ODC (list titik polygon)."""
+    global odc_state
+    odc_state.boundary = boundary.points
+    return {"status": "ok", "boundary_points": boundary.points}
+
+
+@router.post("/set-marker")
+def set_marker(marker: ODCMarker):
+    """Simpan marker ODC (titik koordinat)."""
+    global odc_state
+    odc_state.marker = marker
+    return {"status": "ok", "marker": marker}
+
+
+@router.get("/get")
+def get_odc():
+    """Ambil data ODC (boundary + marker)."""
+    return {
+        "boundary": odc_state.boundary,
+        "marker": odc_state.marker,
+    }
