@@ -1,8 +1,20 @@
+# Gunakan base image Node.js yang ringan
 FROM node:20-alpine
 
+# Set direktori kerja di dalam container
 WORKDIR /usr/src/app
+
+# Copy file package.json dan lock file
 COPY package*.json ./
-RUN npm ci
+
+# Install semua dependencies
+RUN npm install
+
+# Copy semua sisa kode aplikasi
 COPY . .
-EXPOSE 5173
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+# Expose port yang digunakan oleh aplikasi Anda
+EXPOSE 3000
+
+# Perintah default untuk menjalankan aplikasi
+CMD ["npm", "run", "dev"]

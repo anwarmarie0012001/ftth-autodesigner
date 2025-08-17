@@ -1,20 +1,47 @@
+# Menggunakan versi spesifikasi Compose terbaru untuk fitur modern
+version: '3.8'
+
+# Mendefinisikan semua layanan (container) yang akan dijalankan
 services:
+
+  # Layanan untuk aplikasi backend
   backend:
+    # Memberi nama yang jelas pada container
+    container_name: ftth-backend-container
+    # Membangun image Docker dari Dockerfile di dalam folder ./backend
     build: ./backend
-    container_name: ftth-backend
+    # Memetakan port 8000 di komputer Anda ke port 8000 di dalam container
     ports:
       - "8000:8000"
+    # Menyinkronkan folder 'app' di backend agar perubahan kode langsung terlihat
     volumes:
-      - ./backend:/app
-    restart: always
+      - ./backend/app:/app
+    # Menghubungkan container ini ke jaringan kustom 'ftth-net'
+    networks:
+      - ftth-net
 
+  # Layanan untuk aplikasi frontend
   frontend:
+    # Memberi nama yang jelas pada container
+    container_name: ftth-frontend-container
+    # Membangun image Docker dari Dockerfile di dalam folder ./frontend
     build: ./frontend
-    container_name: ftth-frontend
+    # Memetakan port 3000 di komputer Anda ke port 3000 di dalam container
     ports:
-      - "5173:5173"
+      - "3000:3000"
+    # Menyinkronkan semua file di frontend untuk pengembangan (live reload)
+    # Pengecualian untuk node_modules agar tidak ditimpa dari lokal
     volumes:
       - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    # Menghubungkan container ini ke jaringan kustom 'ftth-net'
+    networks:
+      - ftth-net
+    # Memastikan container frontend baru akan dimulai setelah backend siap
     depends_on:
       - backend
-    restart: always
+
+# Mendefinisikan jaringan kustom untuk komunikasi antar container
+networks:
+  ftth-net:
+    driver: bridge
