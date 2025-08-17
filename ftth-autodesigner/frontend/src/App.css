@@ -1,6 +1,0 @@
-
-html, body, #root { height: 100%; margin: 0; }
-#map { height: 90vh; }
-.controls { padding: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-label { font-weight: 600; }
-button { padding: 6px 10px; }
