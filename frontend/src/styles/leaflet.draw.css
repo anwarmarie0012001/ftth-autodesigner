@@ -1,0 +1,9 @@
+/* Leaflet Draw custom styles (minimal fix) */
+.leaflet-draw-toolbar a {
+  background-color: #fff;
+  border: 1px solid #ccc;
+}
+
+.leaflet-draw-toolbar a:hover {
+  background-color: #f0f0f0;
+}
