@@ -1,47 +1,51 @@
-# Menggunakan versi spesifikasi Compose terbaru untuk fitur modern
-version: '3.8'
+version: "3.9"
 
-# Mendefinisikan semua layanan (container) yang akan dijalankan
 services:
-
-  # Layanan untuk aplikasi backend
   backend:
-    # Memberi nama yang jelas pada container
-    container_name: ftth-backend-container
-    # Membangun image Docker dari Dockerfile di dalam folder ./backend
-    build: ./backend
-    # Memetakan port 8000 di komputer Anda ke port 8000 di dalam container
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ftth-backend
+    restart: always
     ports:
       - "8000:8000"
-    # Menyinkronkan folder 'app' di backend agar perubahan kode langsung terlihat
     volumes:
       - ./backend/app:/app
-    # Menghubungkan container ini ke jaringan kustom 'ftth-net'
-    networks:
-      - ftth-net
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - db
 
-  # Layanan untuk aplikasi frontend
   frontend:
-    # Memberi nama yang jelas pada container
-    container_name: ftth-frontend-container
-    # Membangun image Docker dari Dockerfile di dalam folder ./frontend
-    build: ./frontend
-    # Memetakan port 3000 di komputer Anda ke port 3000 di dalam container
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ftth-frontend
+    restart: always
     ports:
       - "3000:3000"
-    # Menyinkronkan semua file di frontend untuk pengembangan (live reload)
-    # Pengecualian untuk node_modules agar tidak ditimpa dari lokal
     volumes:
-      - ./frontend:/usr/src/app
-      - /usr/src/app/node_modules
-    # Menghubungkan container ini ke jaringan kustom 'ftth-net'
-    networks:
-      - ftth-net
-    # Memastikan container frontend baru akan dimulai setelah backend siap
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    stdin_open: true
+    tty: true
     depends_on:
       - backend
 
-# Mendefinisikan jaringan kustom untuk komunikasi antar container
-networks:
-  ftth-net:
-    driver: bridge
+  db:
+    image: postgres:15
+    container_name: ftth-db
+    restart: always
+    environment:
+      POSTGRES_USER: ftth_user
+      POSTGRES_PASSWORD: ftth_pass
+      POSTGRES_DB: ftth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
