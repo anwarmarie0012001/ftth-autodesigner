@@ -5,14 +5,15 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    # Menjalankan Uvicorn dalam mode stabil tanpa --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     container_name: ftth-backend
     restart: always
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/app:/app
-    environment:
-      - PYTHONUNBUFFERED=1
+      - ./backend/app:/app/app
+    working_dir: /app
     depends_on:
       - db
 
